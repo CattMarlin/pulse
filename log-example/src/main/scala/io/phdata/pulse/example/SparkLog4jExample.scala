@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package io.phdata.pams.example
+package io.phdata.pulse.example
 
-import java.net.InetAddress
 import org.apache.log4j.MDC
 import org.apache.spark.{ SparkConf, SparkContext }
-import org.slf4j.LoggerFactory
-import scala.util.Try
+import org.slf4j.{ Logger, LoggerFactory }
 
 /**
  * This example shows how to
@@ -30,28 +28,57 @@ import scala.util.Try
  */
 object SparkLog4jExample {
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private implicit val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def main(args: Array[String]): Unit = {
     log.info("Starting up the spark logging example")
     val conf = new SparkConf().setAppName("Pulse Spark Logging Example")
     val sc   = SparkContext.getOrCreate(conf)
 
-    val testData = 1 to 1000000
+    run(sc, numEvents = 10000)
+    sc.stop()
+    import org.apache.log4j.LogManager
+    LogManager.shutdown()
+  }
+
+  def run(sc: SparkContext, numEvents: Int): Unit = {
+    val testData = 1 to numEvents
     val testRdd  = sc.parallelize(testData)
 
-    testRdd.foreach { num =>
-      if (num % 10000 == 0) {
-        log.error(s"XXXXX error! num: " + num)
-      } else if (num % 5000 == 0) {
-        log.warn(s"XXXXX warning! num: " + num)
-      } else {
-        log.info(s"XXXXX found: " + num)
+    PulseProfiler.time("metric_rdd_foreach") { () =>
+      testRdd.foreach { num =>
+        if (num % 10000 == 0) {
+          log.error(s"XXXXX error! num: " + num)
+        } else if (num % 5000 == 0) {
+          log.warn(s"XXXXX warning! num: " + num)
+        } else {
+          log.info(s"XXXXX found: " + num)
+        }
       }
     }
 
+    PulseProfiler.measure("metric_count", testRdd.count())
+
     log.info("Shutting down the spark logging example")
-    sc.stop()
+  }
+}
+
+object PulseProfiler {
+  def time[E](tag: String)(func: () => E)(implicit logger: Logger): E = {
+    val start   = System.currentTimeMillis()
+    val result  = func()
+    val elapsed = System.currentTimeMillis() - start
+    measure(tag, elapsed.toString)
+    result
   }
 
+  def measure(tag: String, value: String)(implicit logger: Logger): Unit = {
+    MDC.put(tag, value)
+    println(s"tag: $tag, value: $value")
+    logger.info("metric")
+    MDC.remove(tag)
+  }
+
+  def measure(tag: String, value: Long)(implicit logger: Logger): Unit =
+    measure(tag, value.toString)
 }

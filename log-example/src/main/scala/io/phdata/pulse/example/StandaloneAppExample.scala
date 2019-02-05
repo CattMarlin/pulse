@@ -16,7 +16,7 @@
 
 package io.phdata.pulse.example
 
-import org.apache.log4j.{ Logger, MDC, NDC }
+import org.apache.log4j.{ Appender, Logger, MDC, NDC }
 
 object StandaloneAppExample {
   private val log = Logger.getLogger(this.getClass)
@@ -34,8 +34,16 @@ object StandaloneAppExample {
         log.error(s"error happened $uuid", new Exception())
       }
     }
-    throw new Exception("exiting")
-
+    try {
+      throw new Exception("exiting")
+    } catch {
+      case e: Throwable =>
+        import scala.collection.JavaConverters._
+        org.apache.log4j.Logger.getRootLogger.getAllAppenders.asScala
+          .map(_.asInstanceOf[Appender]) foreach {
+          case x if x.getName == "http" => x.close()
+          case _                        => () // keep the console appender open just in case another message comes through
+        }
+    }
   }
-
 }

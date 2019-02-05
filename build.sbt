@@ -58,7 +58,7 @@ lazy val dependencies =
 
     val sprayJson = "io.spray" %% "spray-json" % sprayJsonVersion
 
-    val spark = "org.apache.spark" %% "spark-core" % sparkVersion % Provided
+    val spark = "org.apache.spark" %% "spark-core" % sparkVersion
     // Testing depends
     val scalaTest = "org.scalatest" %% "scalatest" % scalaTestVersion % Test
     val scalaDockerTest = "com.whisk" %% "docker-testkit-scalatest" % dockerTestKitVersion % Test
@@ -165,8 +165,8 @@ lazy val `log-example` = project
   .settings(
     name := "log-example",
     settings,
-    libraryDependencies ++= Seq("log4j" % "log4j" % "1.2.16", dependencies.spark)
-  )
+    libraryDependencies ++= Seq("log4j" % "log4j" % "1.2.16", dependencies.spark, dependencies.scalaTest)
+  ).dependsOn(`log-appender`)
 
 // Library versions
 val logbackVersion = "1.2.3"
@@ -183,7 +183,7 @@ val sprayJsonVersion = "1.3.3"
 val sparkVersion = "2.2.0.cloudera1"
 val log4jVersion = "1.2.17"
 val httpClientVersion = "4.5.5"
-val jacksonVersion = "2.9.4"
+val jacksonVersion = "2.2.3"
 val junitVersion = "4.12"
 val javaMailVersion = "1.4"
 val mockitoVersion = "1.10.19"
